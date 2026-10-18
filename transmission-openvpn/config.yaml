@@ -40,6 +40,7 @@ options:
   LOCAL_NETWORK: "192.168.0.0/16"
   TRANSMISSION_DOWNLOAD_DIR: "/share/downloads"
   TRANSMISSION_INCOMPLETE_DIR: "/share/incomplete"
+  TRANSMISSION_WEB_UI: "combustion"
 
 schema:
   OPENVPN_PROVIDER: str
@@ -49,3 +50,4 @@ schema:
   LOCAL_NETWORK: str
   TRANSMISSION_DOWNLOAD_DIR: str
   TRANSMISSION_INCOMPLETE_DIR: str
+  TRANSMISSION_WEB_UI: list(default|combustion|kettu|transmission-web-control|flood-for-transmission|shift|transmissionic)
