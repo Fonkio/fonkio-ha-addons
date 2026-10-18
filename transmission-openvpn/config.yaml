@@ -1,0 +1,51 @@
+
+name: Fonkio's Transmission OpenVPN
+slug: transmission_openvpn_fonkio
+version: "5.5.2"
+description: Transmission avec tunnel VPN OpenVPN
+url: https://github.com/haugene/docker-transmission-openvpn
+
+arch:
+  - amd64
+  - aarch64
+
+image: haugene/transmission-openvpn
+
+startup: application
+boot: auto
+init: true
+legacy: true
+
+webui: "http://[HOST]:[PORT:9091]"
+
+ports:
+  "9091/tcp": 9091
+
+map:
+  - type: app_config
+    read_only: false
+  - type: share
+    read_only: false
+
+privileged:
+  - NET_ADMIN
+
+environment:
+  CREATE_TUN_DEVICE: "true"
+  TRANSMISSION_INCOMPLETE_DIR_ENABLED: "true"
+
+options:
+  OPENVPN_PROVIDER: "PIA"
+  OPENVPN_CONFIG: "france"
+  LOCAL_NETWORK: "192.168.0.0/16"
+  TRANSMISSION_DOWNLOAD_DIR: "/share/downloads"
+  TRANSMISSION_INCOMPLETE_DIR: "/share/incomplete"
+
+schema:
+  OPENVPN_PROVIDER: str
+  OPENVPN_CONFIG: str
+  OPENVPN_USERNAME: str
+  OPENVPN_PASSWORD: password
+  LOCAL_NETWORK: str
+  TRANSMISSION_DOWNLOAD_DIR: str
+  TRANSMISSION_INCOMPLETE_DIR: str
