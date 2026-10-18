@@ -1,0 +1,17 @@
+{
+  "name": "Sonarr",
+  "slug": "sonarr",
+  "version": "5.0.0.2668",
+  "description": "Sonarr",
+  "arch": ["amd64", "aarch64"],
+  "image": "ghcr.io/linuxserver/sonarr:develop-version-5.0.0.2668",
+  "startup": "application",
+  "boot": "auto",
+  "ports": {
+    "8989/tcp": 8989
+  },
+  "map": [
+    "config:rw",
+    "media:rw"
+  ]
+}
