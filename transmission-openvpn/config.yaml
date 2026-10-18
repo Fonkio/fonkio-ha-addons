@@ -30,8 +30,11 @@ map:
 privileged:
   - NET_ADMIN
 
+devices:
+  - /dev/net/tun
+
 environment:
-  CREATE_TUN_DEVICE: "true"
+  CREATE_TUN_DEVICE: "false"
   TRANSMISSION_INCOMPLETE_DIR_ENABLED: "true"
 
 options:
