@@ -7,6 +7,7 @@
   "image": "ghcr.io/linuxserver/sonarr",
   "startup": "application",
   "boot": "auto",
+  "init": false,
   "ports": {
     "8989/tcp": 8989
   },
