@@ -1,10 +1,10 @@
 {
   "name": "Fonkio's Sonarr",
   "slug": "sonarr_fonkio",
-  "version": "5.0.0.2668",
+  "version": "develop-version-5.0.0.2668",
   "description": "Sonarr",
   "arch": ["amd64", "aarch64"],
-  "image": "ghcr.io/linuxserver/sonarr:develop-version-5.0.0.2668",
+  "image": "ghcr.io/linuxserver/sonarr",
   "startup": "application",
   "boot": "auto",
   "ports": {
