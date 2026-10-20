@@ -8,6 +8,8 @@ arch:
   - amd64
   - aarch64
 
+init: false
+
 ports:
   7878/tcp: 7878
 
