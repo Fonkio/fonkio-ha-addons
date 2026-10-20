@@ -1,8 +1,8 @@
 name: "Fonkio's Sonarr"
-version: "develop-version-5.0.0.2668"
+version: "develop-version-5.0.0.2701"
 slug: "sonarr_fonkio"
 description: "Sonarr"
-url: "https://github.com/Sonarr/Sonarr"
+url: "https://github.com/linuxserver/docker-sonarr/pkgs/container/sonarr"
 
 arch:
   - amd64

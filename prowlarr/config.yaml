@@ -2,7 +2,7 @@ name: "Fonkio's Prowlarr"
 version: "version-2.6.5.5623"
 slug: "prowlarr_fonkio"
 description: "Prowlarr"
-url: "https://github.com/Prowlarr/Prowlarr"
+url: "https://github.com/linuxserver/docker-prowlarr/pkgs/container/prowlarr"
 
 arch:
   - amd64

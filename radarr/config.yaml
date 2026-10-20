@@ -1,8 +1,8 @@
 name: "Fonkio's Radarr"
-version: "nightly-version-7.0.0.10788"
+version: "version-6.4.4.10685"
 slug: "radarr_fonkio"
 description: "Radarr"
-url: "https://github.com/Radarr/Radarr"
+url: "https://github.com/linuxserver/docker-radarr/pkgs/container/radarr"
 
 arch:
   - amd64

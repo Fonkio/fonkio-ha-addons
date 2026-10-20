@@ -2,7 +2,7 @@ name: "Fonkio's Transmission OpenVPN"
 version: "5.5.2"
 slug: "transmission_openvpn_fonkio"
 description: "Transmission avec tunnel VPN OpenVPN"
-url: "https://github.com/haugene/docker-transmission-openvpn"
+url: "https://hub.docker.com/r/haugene/transmission-openvpn/"
 
 arch:
   - amd64
