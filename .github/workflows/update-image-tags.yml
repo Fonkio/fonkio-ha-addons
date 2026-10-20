@@ -1,0 +1,41 @@
+name: Update Home Assistant add-on image tags
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Tous les jours à 03:17 UTC
+    - cron: "17 3 * * *"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-addon-image-tags
+  cancel-in-progress: false
+
+jobs:
+  update-tags:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Récupérer le dépôt
+        uses: actions/checkout@v4
+
+      - name: Préparer Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Détecter et mettre à jour les tags
+        run: python scripts/update_image_tags.py
+
+      - name: Enregistrer les changements dans Git
+        run: |
+          if git diff --quiet; then
+            echo "Aucune mise à jour de tag détectée."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -u
+          git commit -m "chore: update add-on image tags"
+          git push
