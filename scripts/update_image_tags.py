@@ -23,7 +23,7 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[1]
 API_BASE = "https://hub.docker.com/v2/repositories/{repository}/tags?page_size=100&ordering=last_updated"
 USER_AGENT = "ha-addon-image-tag-updater/2.0"
-MAX_PAGES = 50
+MAX_PAGES = 10  # Docker Hub legacy tags API may deny page 11+ on large repositories
 REQUIRED_ARCHES = ("amd64", "arm64")
 
 LS_IMAGE_RE = re.compile(
@@ -88,7 +88,17 @@ def fetch_all_tags(repository: str) -> dict[str, dict[str, Any]]:
                 tags[name] = tag
         url = data.get("next")
     if url:
-        raise RuntimeError(f"Trop de pages de tags pour {repository}; arrêt par sécurité.")
+        # Docker Hub's legacy tags endpoint can return HTTP 403 when paging past
+        # the first 1,000 tags of large public repositories. Since results are
+        # ordered by last_updated, the first 1,000 are sufficient for finding
+        # the currently published channel aliases and their matching build tags.
+        # Return the partial recent-tag set rather than failing the whole run.
+        print(
+            f"AVERTISSEMENT: {repository} contient plus de {MAX_PAGES * 100} tags; "
+            f"seuls les {MAX_PAGES * 100} tags les plus récemment mis à jour "
+            "seront examinés (limitation volontaire pour éviter le HTTP 403 sur les pages profondes).",
+            file=sys.stderr,
+        )
     return tags
 
 
