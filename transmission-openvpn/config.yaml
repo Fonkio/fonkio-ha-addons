@@ -1,25 +1,17 @@
-
-name: Fonkio's Transmission OpenVPN
-slug: transmission_openvpn_fonkio
+name: "Fonkio's Transmission OpenVPN"
 version: "5.5.2"
-description: Transmission avec tunnel VPN OpenVPN
-url: https://github.com/haugene/docker-transmission-openvpn
+slug: "transmission_openvpn_fonkio"
+description: "Transmission avec tunnel VPN OpenVPN"
+url: "https://github.com/haugene/docker-transmission-openvpn"
 
 arch:
   - amd64
   - aarch64
 
-image: haugene/transmission-openvpn
-
-startup: application
-boot: auto
 init: true
-legacy: true
-
-webui: "http://[HOST]:[PORT:9091]"
 
 ports:
-  "9091/tcp": 9091
+  9091/tcp: 9091
 
 map:
   - type: app_config
@@ -27,11 +19,19 @@ map:
   - type: share
     read_only: false
 
-privileged:
-  - NET_ADMIN
+image: "haugene/transmission-openvpn"
+
+webui: "http://[HOST]:[PORT:9091]"
+panel_title: "Transmission"
+panel_icon: "mdi:swap-vertical-bold"
 
 devices:
   - /dev/net/tun
+
+privileged:
+  - NET_ADMIN
+
+legacy: true
 
 environment:
   CREATE_TUN_DEVICE: "false"

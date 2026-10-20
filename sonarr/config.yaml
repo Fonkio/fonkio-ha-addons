@@ -1,0 +1,26 @@
+name: "Fonkio's Sonarr"
+version: "develop-version-5.0.0.2668"
+slug: "sonarr_fonkio"
+description: "Sonarr"
+url: "https://github.com/Sonarr/Sonarr"
+
+arch:
+  - amd64
+  - aarch64
+
+init: false
+
+ports:
+  8989/tcp: 8989
+
+map:
+  - type: app_config
+    read_only: false
+  - type: share
+    read_only: false
+
+image: ghcr.io/linuxserver/sonarr
+
+webui: "https://sonarr.fonkio.ovh"
+panel_title: "Sonarr"
+panel_icon: "mdi:youtube-tv"
