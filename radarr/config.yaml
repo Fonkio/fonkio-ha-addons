@@ -1,5 +1,5 @@
 name: "Fonkio's Radarr"
-version: "version-6.4.4.10685"
+version: "6.4.4.10685-ls323"
 slug: "radarr_fonkio"
 description: "Radarr"
 url: "https://github.com/linuxserver/docker-radarr/pkgs/container/radarr"
