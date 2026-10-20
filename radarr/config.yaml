@@ -1,0 +1,26 @@
+name: "Fonkio's Radarr"
+version: "nightly-version-7.0.0.10788"
+slug: "radarr_fonkio"
+description: "Radarr"
+url: "https://github.com/Radarr/Radarr"
+
+arch:
+  - amd64
+  - aarch64
+
+init: false
+
+ports:
+  7878/tcp: 7878
+
+map:
+  - type: app_config
+    read_only: false
+  - type: share
+    read_only: false
+
+image: ghcr.io/linuxserver/radarr
+
+webui: "https://radarr.fonkio.ovh"
+panel_title: "Radarr"
+panel_icon: "mdi:movie-open"
