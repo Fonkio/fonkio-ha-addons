@@ -20,7 +20,3 @@ map:
     read_only: false
 
 image: ghcr.io/linuxserver/sonarr
-
-webui: "https://sonarr.fonkio.ovh"
-panel_title: "Sonarr"
-panel_icon: "mdi:youtube-tv"

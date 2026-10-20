@@ -18,7 +18,3 @@ map:
     read_only: false
 
 image: ghcr.io/linuxserver/prowlarr
-
-webui: "https://prowlarr.fonkio.ovh"
-panel_title: "Prowlarr"
-panel_icon: "mdi:database-search"

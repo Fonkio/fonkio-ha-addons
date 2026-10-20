@@ -8,8 +8,6 @@ arch:
   - amd64
   - aarch64
 
-init: true
-
 ports:
   9091/tcp: 9091
 
@@ -20,10 +18,6 @@ map:
     read_only: false
 
 image: "haugene/transmission-openvpn"
-
-webui: "http://[HOST]:[PORT:9091]"
-panel_title: "Transmission"
-panel_icon: "mdi:swap-vertical-bold"
 
 devices:
   - /dev/net/tun

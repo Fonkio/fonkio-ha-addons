@@ -8,8 +8,6 @@ arch:
   - amd64
   - aarch64
 
-init: false
-
 ports:
   7878/tcp: 7878
 
@@ -20,7 +18,3 @@ map:
     read_only: false
 
 image: ghcr.io/linuxserver/radarr
-
-webui: "https://radarr.fonkio.ovh"
-panel_title: "Radarr"
-panel_icon: "mdi:movie-open"
