@@ -1,14 +1,21 @@
 #!/usr/bin/env python3
 """Update Home Assistant add-on config.yaml version fields to pinned Docker tags.
 
-Policies:
-- linuxserver/sonarr: preserve channel inferred from config.version (develop/stable/nightly)
-- linuxserver/radarr: preserve channel inferred from config.version (stable if no develop/nightly)
-  and prefer a precise LinuxServer -lsN build tag whose amd64/arm64 digests match the channel alias.
-- haugene/transmission-openvpn: select the highest strict X.Y.Z release tag only, requiring
-  linux/amd64 and linux/arm64 images. Tags such as latest, 5, 5.5, master, edge, and dev are ignored.
+Algorithmes de sélection :
+- linuxserver/sonarr et linuxserver/radarr : déduire le canal (stable, develop ou nightly)
+  du champ version actuel, lire l'alias du canal, puis choisir un tag de build précis dont les
+  digests linux/amd64 et linux/arm64 correspondent exactement à ceux de cet alias.
+- haugene/transmission-openvpn : choisir la plus grande version au format strict X.Y.Z.
+  Les tags flottants (latest, 5, 5.5, master, edge, dev) et les préversions sont ignorés.
+- Seerr officiel : choisir la plus grande version stable au format strict vX.Y.Z.
+  Le préfixe v est obligatoire ; les alias (latest, v3, v3.0), develop et les préversions sont ignorés.
 
-The Home Assistant add-on `version:` must equal the Docker tag when `image:` is present.
+Dans un add-on Home Assistant, le champ `version:` sert aussi de tag Docker lorsque `image:`
+est défini. Le script met donc ce champ à jour, mais ne déploie pas lui-même l'image dans Home Assistant.
+
+Le script suit trois étapes : (1) reconnaître l'image déclarée dans chaque config.yaml ;
+(2) récupérer et filtrer les tags disponibles selon les règles propres à cette image ;
+(3) remplacer uniquement la ligne version: si une nouvelle version acceptable a été trouvée.
 """
 from __future__ import annotations
 
@@ -22,7 +29,7 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 API_BASE = "https://hub.docker.com/v2/repositories/{repository}/tags?page_size=100&ordering=last_updated"
-USER_AGENT = "ha-addon-image-tag-updater/2.0"
+USER_AGENT = "ha-addon-image-tag-updater/3.0"
 MAX_PAGES = 10  # Docker Hub legacy tags API may deny page 11+ on large repositories
 REQUIRED_ARCHES = ("amd64", "arm64")
 
@@ -31,6 +38,12 @@ LS_IMAGE_RE = re.compile(
 )
 TRANSMISSION_IMAGE_RE = re.compile(
     r"^\s*image:\s*[\"']?(?:(?:docker\.io)/)?haugene/transmission-openvpn[\"']?\s*(?:#.*)?$"
+)
+# Seerr officiel publie les mêmes tags stables sur Docker Hub et GHCR.
+# On lit la liste via le dépôt Docker Hub public `seerr/seerr`, même si l'add-on
+# téléchargera finalement son image depuis `ghcr.io/seerr-team/seerr`.
+SEERR_IMAGE_RE = re.compile(
+    r"^\s*image:\s*[\"']?(?:ghcr\.io/seerr-team/seerr|(?:(?:docker\.io)/)?seerr/seerr)[\"']?\s*(?:#.*)?$"
 )
 VERSION_RE = re.compile(r"^\s*version:\s*[\"']?([^\"'\s#]+)")
 
@@ -60,10 +73,14 @@ CHANNELS: dict[str, dict[str, Any]] = {
         ],
     },
 }
+# Transmission attend 3 composants numériques sans préfixe : 5.5.2.
 STRICT_SEMVER = re.compile(r"^(\d+)\.(\d+)\.(\d+)$")
+# Seerr suit la même comparaison numérique, mais le `v` initial est obligatoire : v3.0.0.
+STRICT_V_SEMVER = re.compile(r"^v(\d+)\.(\d+)\.(\d+)$")
 
 
 def get_json(url: str) -> dict[str, Any]:
+    """Lire une réponse JSON de l'API des tags Docker Hub avec un timeout."""
     request = urllib.request.Request(
         url,
         headers={"Accept": "application/json", "User-Agent": USER_AGENT},
@@ -76,6 +93,13 @@ def get_json(url: str) -> dict[str, Any]:
 
 
 def fetch_all_tags(repository: str) -> dict[str, dict[str, Any]]:
+    """Récupérer les tags récents, sans dépasser 10 pages (1000 tags).
+
+    Docker Hub peut renvoyer HTTP 403 sur les pages profondes des gros dépôts.
+    On conserve alors le jeu de résultats partiel et récent, avec un avertissement.
+    Les sélecteurs plus bas échouent explicitement si ces résultats ne permettent
+    pas de prouver qu'un tag est valide : aucune version n'est devinée.
+    """
     url: str | None = API_BASE.format(repository=repository)
     tags: dict[str, dict[str, Any]] = {}
     for _ in range(MAX_PAGES):
@@ -103,6 +127,12 @@ def fetch_all_tags(repository: str) -> dict[str, dict[str, Any]]:
 
 
 def digest_map(tag: dict[str, Any] | None) -> dict[str, str]:
+    """Retourner les digests des images Linux amd64/arm64 d'un tag.
+
+    Utilisé pour vérifier qu'un tag précis LinuxServer est réellement la même
+    build que l'alias de canal (latest/develop/nightly), et pour exclure les tags
+    de Transmission/Seerr qui ne publient pas les deux architectures requises.
+    """
     result: dict[str, str] = {}
     if not tag:
         return result
@@ -117,6 +147,7 @@ def digest_map(tag: dict[str, Any] | None) -> dict[str, str]:
 
 
 def channel_for_version(version: str) -> str:
+    """Déduire le canal depuis le tag déjà configuré, afin de ne pas changer de canal."""
     lowered = version.lower()
     if "nightly" in lowered:
         return "nightly"
@@ -126,6 +157,12 @@ def channel_for_version(version: str) -> str:
 
 
 def linuxserver_target_tag(app: str, channel: str, all_tags: dict[str, dict[str, Any]] | None = None) -> str:
+    """Trouver le tag de build LinuxServer qui correspond au canal sélectionné.
+
+    On compare les digests amd64/arm64 de chaque candidat avec ceux de l'alias
+    du canal. On ne se contente donc pas de choisir le nom de version le plus grand :
+    cela évite de sélectionner une ancienne build ou un tag d'une autre branche.
+    """
     config = CHANNELS[channel]
     alias = config["alias"]
     tags = all_tags if all_tags is not None else fetch_all_tags(f"linuxserver/{app}")
@@ -155,6 +192,12 @@ def linuxserver_target_tag(app: str, channel: str, all_tags: dict[str, dict[str,
 
 
 def transmission_target_tag(all_tags: dict[str, dict[str, Any]] | None = None) -> str:
+    """Sélectionner la plus grande release Transmission au format strict X.Y.Z.
+
+    La comparaison est faite sur les trois entiers, pas sur les chaînes : par
+    exemple 5.10.0 doit être plus récent que 5.9.9. Les alias et préversions ne
+    correspondent pas à STRICT_SEMVER et sont donc automatiquement ignorés.
+    """
     tags = all_tags if all_tags is not None else fetch_all_tags("haugene/transmission-openvpn")
     candidates: list[tuple[tuple[int, int, int], str]] = []
     for name, tag in tags.items():
@@ -175,8 +218,42 @@ def transmission_target_tag(all_tags: dict[str, dict[str, Any]] | None = None) -
     return candidates[0][1]
 
 
+def seerr_target_tag(all_tags: dict[str, dict[str, Any]] | None = None) -> str:
+    """Sélectionner la plus grande release stable de Seerr au format vX.Y.Z.
+
+    La règle est volontairement presque identique à celle de Transmission, avec
+    deux différences : le tag doit commencer par `v`, et la source de tags est
+    le dépôt officiel Docker Hub `seerr/seerr`. Les alias `latest`, `v3`, `v3.0`,
+    `develop`, les tags `sha-*` et les préversions `vX.Y.Z-rc...` sont exclus.
+    Chaque tag retenu doit publier des images linux/amd64 et linux/arm64.
+    """
+    tags = all_tags if all_tags is not None else fetch_all_tags("seerr/seerr")
+    candidates: list[tuple[tuple[int, int, int], str]] = []
+    for name, tag in tags.items():
+        # Le fullmatch impose exactement v + trois composants numériques.
+        match = STRICT_V_SEMVER.fullmatch(name)
+        if not match:
+            continue
+        # Écarter les tags incomplets pour les architectures visées par l'add-on.
+        arches = digest_map(tag)
+        if not all(arches.get(arch) for arch in REQUIRED_ARCHES):
+            continue
+        # Convertir chaque composant en entier pour comparer les versions correctement.
+        version_tuple = tuple(int(part) for part in match.groups())
+        candidates.append((version_tuple, name))
+
+    if not candidates:
+        raise RuntimeError(
+            "Aucun tag Seerr stable au format strict vX.Y.Z trouvé avec les architectures "
+            "amd64 et arm64. Aucun changement effectué."
+        )
+
+    candidates.sort(key=lambda item: item[0], reverse=True)
+    return candidates[0][1]
+
+
 def get_config_identity(content: str) -> tuple[str, str] | None:
-    image: str | None = None
+    """Identifier le registre/image déclaré dans config.yaml à partir de sa ligne image:."""
     for line in content.splitlines():
         if LS_IMAGE_RE.match(line):
             match = LS_IMAGE_RE.match(line)
@@ -184,10 +261,18 @@ def get_config_identity(content: str) -> tuple[str, str] | None:
             return ("linuxserver", match.group(1))
         if TRANSMISSION_IMAGE_RE.match(line):
             return ("transmission", "haugene/transmission-openvpn")
+        if SEERR_IMAGE_RE.match(line):
+            # Toujours lire les tags du dépôt Docker Hub officiel, même si l'image
+            # configurée dans l'add-on est téléchargée depuis GHCR.
+            return ("seerr", "seerr/seerr")
     return None
 
 
 def update_version_line(content: str, new_version: str) -> tuple[str, str | None]:
+    """Remplacer uniquement la première ligne `version:` en préservant l'indentation.
+
+    Le reste du YAML n'est pas réécrit, ce qui limite le diff généré par Actions.
+    """
     lines = content.splitlines(keepends=True)
     for index, line in enumerate(lines):
         match = VERSION_RE.match(line.rstrip("\r\n"))
@@ -205,6 +290,7 @@ def update_version_line(content: str, new_version: str) -> tuple[str, str | None
 
 
 def main() -> int:
+    """Parcourir les config.yaml du dépôt, calculer une fois chaque cible, puis modifier."""
     configs = sorted(ROOT.rglob("config.yaml"))
     checked = changed = 0
     targets: dict[tuple[str, str], str] = {}
@@ -234,13 +320,20 @@ def main() -> int:
                 targets[key] = linuxserver_target_tag(app, channel, tags)
             target_version = targets[key]
             print(f"{path.relative_to(ROOT)}: LinuxServer {app}, canal {channel}")
-        else:
+        elif provider == "transmission":
             key = (provider, app)
             if key not in targets:
                 tags = fetch_all_tags(app)
                 targets[key] = transmission_target_tag(tags)
             target_version = targets[key]
             print(f"{path.relative_to(ROOT)}: Transmission, tag SemVer strict X.Y.Z")
+        else:  # provider == "seerr"
+            key = (provider, app)
+            if key not in targets:
+                tags = fetch_all_tags(app)
+                targets[key] = seerr_target_tag(tags)
+            target_version = targets[key]
+            print(f"{path.relative_to(ROOT)}: Seerr, tag SemVer strict vX.Y.Z")
 
         checked += 1
         if old_version == target_version:
@@ -257,7 +350,7 @@ def main() -> int:
     if checked == 0:
         print(
             "Aucun config.yaml reconnu. Images prises en charge: linuxserver/radarr, "
-            "linuxserver/sonarr et haugene/transmission-openvpn.",
+            "linuxserver/sonarr, haugene/transmission-openvpn et seerr/seerr.",
             file=sys.stderr,
         )
         return 1
