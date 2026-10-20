@@ -1,0 +1,19 @@
+name: "Fonkio's Seerr"
+version: "v3.4.1"
+slug: "seerr_fonkio"
+description: "Seerr"
+url: "https://hub.docker.com/r/seerr/seerr"
+
+arch:
+  - amd64
+  - aarch64
+
+ports:
+  5055/tcp: 5055
+
+map:
+  - type: app_config
+    read_only: false
+    path: /app/config
+
+image: ghcr.io/seerr-team/seerr
