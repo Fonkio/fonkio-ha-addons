@@ -1,5 +1,5 @@
 name: "Fonkio's Sonarr"
-version: "develop-5.0.0.2838-ls204"
+version: "develop-5.0.0.2870-ls205"
 slug: "sonarr_fonkio"
 description: "Sonarr"
 url: "https://github.com/linuxserver/docker-sonarr/pkgs/container/sonarr"
